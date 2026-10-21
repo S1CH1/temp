@@ -1,6 +1,3 @@
-import base64
-import json
-
 from flask import Flask, redirect, session
 from authlib.integrations.flask_client import OAuth
 
@@ -23,29 +20,12 @@ oauth.register(
 )
 
 
-def get_roles():
-    """Lit les rôles realm dans l'access_token (sans vérifier la signature, juste pour l'affichage)."""
-    token = session.get("access_token")
-    if not token:
-        return []
-    payload = token.split(".")[1]
-    payload += "=" * (-len(payload) % 4)
-    data = json.loads(base64.urlsafe_b64decode(payload))
-    return data.get("realm_access", {}).get("roles", [])
-
-
 @app.route("/")
 def home():
     user = session.get("user")
     if not user:
         return '<a href="/login">Se connecter</a>'
-    return (
-        f"Bonjour {user['preferred_username']} !<br>"
-        f"Tes rôles : {get_roles()}<br><br>"
-        f"<a href='/admin'>Page admin</a> | "
-        f"<a href='/reports'>Rapports</a> | "
-        f"<a href='/logout'>Se déconnecter</a>"
-    )
+    return f"Bonjour {user['preferred_username']} ! <a href='/logout'>Se déconnecter</a><pre>{user}</pre>"
 
 
 @app.route("/login")
@@ -57,29 +37,13 @@ def login():
 def callback():
     token = oauth.keycloak.authorize_access_token()
     session["user"] = token["userinfo"]
-    session["access_token"] = token["access_token"]
     session["id_token"] = token["id_token"]
     return redirect("/")
 
 
-@app.route("/admin")
-def admin():
-    if "app-admin" not in get_roles():
-        return "⛔ Accès refusé : il te faut le rôle app-admin. <a href='/'>Retour</a>", 403
-    return "✅ Bienvenue dans la zone admin. <a href='/'>Retour</a>"
-
-
-@app.route("/reports")
-def reports():
-    # view-reports n'est pas donné directement à alice : elle l'a via le composite app-admin
-    if "view-reports" not in get_roles():
-        return "⛔ Accès refusé : il te faut le rôle view-reports. <a href='/'>Retour</a>", 403
-    return "📊 Voici les rapports. <a href='/'>Retour</a>"
-
-
 @app.route("/logout")
 def logout():
-    id_token = session.get("id_token", "")
+    id_token = session.pop("id_token", "")
     session.clear()
     return redirect(
         f"{KEYCLOAK}/protocol/openid-connect/logout"
