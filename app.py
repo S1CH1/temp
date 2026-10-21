@@ -27,6 +27,21 @@ def home():
         return '<a href="/login">Se connecter</a>'
     return f"Bonjour {user['preferred_username']} ! <a href='/logout'>Se déconnecter</a><pre>{user}</pre>"
 
+@app.route("/")
+def home():
+    user = session.get("user")
+    if not user:
+        return '<a href="/login">Se connecter</a>'
+    return (f"Bonjour {user['preferred_username']} !<br>"
+            f"Tes rôles : {get_roles()}<br>"
+            f"<a href='/admin'>Page admin</a> | <a href='/logout'>Se déconnecter</a>")
+
+
+@app.route("/admin")
+def admin():
+    if "app-admin" not in get_roles():
+        return "⛔ Accès refusé : il te faut le rôle app-admin", 403
+    return "✅ Bienvenue dans la zone admin"
 
 @app.route("/login")
 def login():
