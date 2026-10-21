@@ -17,6 +17,7 @@ def get_token():
     return r.json()["access_token"]
 
 
+
 def headers():
     return {"Authorization": "Bearer " + get_token()}
 
@@ -83,6 +84,12 @@ def delete_realm():
     print("delete realm", r.status_code)
 
 
+def add_composite(parent_role, child_role):
+    child = requests.get(f"{KC}/admin/realms/{REALM}/roles/{child_role}", headers=headers()).json()
+    r = requests.post(f"{KC}/admin/realms/{REALM}/roles/{parent_role}/composites",
+                      headers=headers(), json=[child])
+    print("add", child_role, "dans", parent_role, r.status_code)
+
 if __name__ == "__main__":
     create_realm()
     create_client("flask-app")
@@ -91,4 +98,8 @@ if __name__ == "__main__":
     create_role("app-admin")
     give_role("alice", "app-admin")
     list_users()
+    
+    
+    create_role("view-reports")
+    add_composite("app-admin", "view-reports")
     # delete_realm()
